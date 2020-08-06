@@ -74,14 +74,14 @@ public class ColorController extends ContentObserver
     void startListening() {
         ContentResolver resolver = mContext.getContentResolver();
         resolver.registerContentObserver(
-                Settings.System.getUriFor(Settings.System.PULSE_COLOR_TYPE), false,
+                Settings.Secure.getUriFor(Settings.Secure.PULSE_COLOR_MODE), false,
                 this,
                 UserHandle.USER_ALL);
         resolver.registerContentObserver(
-                Settings.System.getUriFor(Settings.System.PULSE_COLOR_USER), false, this,
+                Settings.Secure.getUriFor(Settings.Secure.PULSE_COLOR_USER), false, this,
                 UserHandle.USER_ALL);
         resolver.registerContentObserver(
-                Settings.System.getUriFor(Settings.System.PULSE_LAVALAMP_SPEED), false, this,
+                Settings.Secure.getUriFor(Settings.Secure.PULSE_LAVALAMP_SPEED), false, this,
                 UserHandle.USER_ALL);
     }
 
@@ -90,14 +90,14 @@ public class ColorController extends ContentObserver
         if (mColorType == COLOR_TYPE_LAVALAMP) {
             stopLavaLamp();
         }
-        mColorType = Settings.System.getIntForUser(resolver,
-                Settings.System.PULSE_COLOR_TYPE, COLOR_TYPE_ACCENT, UserHandle.USER_CURRENT);
-        mColor = Settings.System.getIntForUser(resolver,
-                Settings.System.PULSE_COLOR_USER,
+        mColorType = Settings.Secure.getIntForUser(resolver,
+                Settings.Secure.PULSE_COLOR_MODE, COLOR_TYPE_ACCENT, UserHandle.USER_CURRENT);
+        mColor = Settings.Secure.getIntForUser(resolver,
+                Settings.Secure.PULSE_COLOR_USER,
                 getAccentColor(),
                 UserHandle.USER_CURRENT);
-        int lava_speed = Settings.System.getIntForUser(resolver,
-                Settings.System.PULSE_LAVALAMP_SPEED, LAVA_LAMP_SPEED_DEF,
+        int lava_speed = Settings.Secure.getIntForUser(resolver,
+                Settings.Secure.PULSE_LAVALAMP_SPEED, LAVA_LAMP_SPEED_DEF,
                 UserHandle.USER_CURRENT);
         mLavaLamp.setAnimationTime(lava_speed);
         notifyRenderer();

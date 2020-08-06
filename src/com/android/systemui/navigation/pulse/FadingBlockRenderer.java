@@ -85,6 +85,7 @@ public class FadingBlockRenderer extends Renderer {
 
     @Override
     public void onFFTUpdate(byte[] bytes) {
+        int fudgeFactor = mKeyguardShowing ? mDbFuzzFactor * 4 : mDbFuzzFactor;
         mFFTBytes = bytes;
         if (mFFTBytes != null) {
             if (mFFTPoints == null || mFFTPoints.length < mFFTBytes.length * 4) {
@@ -115,11 +116,11 @@ public class FadingBlockRenderer extends Renderer {
                 }
                 if (mVertical) {
                     mFFTPoints[i * 4] = mLeftInLandscape ? 0 : mWidth;
-                    mFFTPoints[i * 4 + 2] = mLeftInLandscape ? (dbValue * mDbFuzzFactor + DBFUZZ)
-                            : (mWidth - (dbValue * mDbFuzzFactor + DBFUZZ));
+                    mFFTPoints[i * 4 + 2] = mLeftInLandscape ? (dbValue * fudgeFactor + DBFUZZ)
+                            : (mWidth - (dbValue * fudgeFactor + DBFUZZ));
                 } else {
                     mFFTPoints[i * 4 + 1] = mHeight;
-                    mFFTPoints[i * 4 + 3] = mHeight - (dbValue * mDbFuzzFactor + DBFUZZ);
+                    mFFTPoints[i * 4 + 3] = mHeight - (dbValue * fudgeFactor + DBFUZZ);
                 }
             }
         }
@@ -142,7 +143,7 @@ public class FadingBlockRenderer extends Renderer {
         if (mView.getWidth() > 0 && mView.getHeight() > 0) {
             mWidth = mView.getWidth();
             mHeight = mView.getHeight();
-            mVertical = mHeight > mWidth;
+            mVertical = mKeyguardShowing ? mHeight < mWidth : mHeight > mWidth;
             mCanvasBitmap = Bitmap.createBitmap(mWidth, mHeight, Config.ARGB_8888);
             mCanvas = new Canvas(mCanvasBitmap);
         }
@@ -195,24 +196,24 @@ public class FadingBlockRenderer extends Renderer {
         void register() {
             ContentResolver resolver = mContext.getContentResolver();
             resolver.registerContentObserver(
-                    Settings.System.getUriFor(Settings.System.PULSE_CUSTOM_DIMEN), false, this,
+                    Settings.Secure.getUriFor(Settings.Secure.PULSE_CUSTOM_DIMEN), false, this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(
-                    Settings.System.getUriFor(Settings.System.PULSE_CUSTOM_DIV), false, this,
+                    Settings.Secure.getUriFor(Settings.Secure.PULSE_CUSTOM_DIV), false, this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(
-                    Settings.System.getUriFor(Settings.System.PULSE_FILLED_BLOCK_SIZE), false,
+                    Settings.Secure.getUriFor(Settings.Secure.PULSE_FILLED_BLOCK_SIZE), false,
                     this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(
-                    Settings.System.getUriFor(Settings.System.PULSE_EMPTY_BLOCK_SIZE), false, this,
+                    Settings.Secure.getUriFor(Settings.Secure.PULSE_EMPTY_BLOCK_SIZE), false, this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(
-                    Settings.System.getUriFor(Settings.System.PULSE_CUSTOM_FUDGE_FACTOR), false,
+                    Settings.Secure.getUriFor(Settings.Secure.PULSE_CUSTOM_FUDGE_FACTOR), false,
                     this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(
-                    Settings.System.getUriFor(Settings.System.PULSE_SMOOTHING_ENABLED), false,
+                    Settings.Secure.getUriFor(Settings.Secure.PULSE_SMOOTHING_ENABLED), false,
                     this,
                     UserHandle.USER_ALL);
         }
@@ -226,20 +227,20 @@ public class FadingBlockRenderer extends Renderer {
             ContentResolver resolver = mContext.getContentResolver();
             final Resources res = mContext.getResources();
 
-            int emptyBlock = Settings.System.getIntForUser(
-                    resolver, Settings.System.PULSE_EMPTY_BLOCK_SIZE, 1,
+            int emptyBlock = Settings.Secure.getIntForUser(
+                    resolver, Settings.Secure.PULSE_EMPTY_BLOCK_SIZE, 1,
                     UserHandle.USER_CURRENT);
-            int customDimen = Settings.System.getIntForUser(
-                    resolver, Settings.System.PULSE_CUSTOM_DIMEN, 14,
+            int customDimen = Settings.Secure.getIntForUser(
+                    resolver, Settings.Secure.PULSE_CUSTOM_DIMEN, 14,
                     UserHandle.USER_CURRENT);
-            int numDivision = Settings.System.getIntForUser(
-                    resolver, Settings.System.PULSE_CUSTOM_DIV, 16,
+            int numDivision = Settings.Secure.getIntForUser(
+                    resolver, Settings.Secure.PULSE_CUSTOM_DIV, 16,
                     UserHandle.USER_CURRENT);
-            int fudgeFactor = Settings.System.getIntForUser(
-                    resolver, Settings.System.PULSE_CUSTOM_FUDGE_FACTOR, 4,
+            int fudgeFactor = Settings.Secure.getIntForUser(
+                    resolver, Settings.Secure.PULSE_CUSTOM_FUDGE_FACTOR, 4,
                     UserHandle.USER_CURRENT);
-            int filledBlock = Settings.System.getIntForUser(
-                    resolver, Settings.System.PULSE_FILLED_BLOCK_SIZE, 4,
+            int filledBlock = Settings.Secure.getIntForUser(
+                    resolver, Settings.Secure.PULSE_FILLED_BLOCK_SIZE, 4,
                     UserHandle.USER_CURRENT);
 
             mPathEffect1 = getLimitedDimenValue(filledBlock, 4, 8, res);
@@ -253,8 +254,8 @@ public class FadingBlockRenderer extends Renderer {
             mDivisions = validateDivision(numDivision);
             mDbFuzzFactor = Math.max(2, Math.min(6, fudgeFactor));
 
-            mSmoothingEnabled = Settings.System.getIntForUser(resolver,
-                    Settings.System.PULSE_SMOOTHING_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
+            mSmoothingEnabled = Settings.Secure.getIntForUser(resolver,
+                    Settings.Secure.PULSE_SMOOTHING_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
         }
     }
 
