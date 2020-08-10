@@ -209,7 +209,7 @@ public class PulseControllerImpl
 
         void updateRenderMode() {
             mPulseStyle = Settings.System.getIntForUser(mContext.getContentResolver(),
-                    Settings.System.PULSE_RENDER_STYLE_URI, RENDER_STYLE_CM, UserHandle.USER_CURRENT);
+                    Settings.System.PULSE_RENDER_STYLE_URI, RENDER_STYLE_LEGACY, UserHandle.USER_CURRENT);
         }
     };
 
