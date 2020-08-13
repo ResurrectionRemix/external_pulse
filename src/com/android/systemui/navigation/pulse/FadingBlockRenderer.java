@@ -123,9 +123,11 @@ public class FadingBlockRenderer extends Renderer {
                 }
             }
         }
-        mCanvas.drawLines(mFFTPoints, mPaint);
-        mCanvas.drawPaint(mFadePaint);
-        postInvalidate();
+     try {
+          mCanvas.drawLines(mFFTPoints, mPaint);
+          mCanvas.drawPaint(mFadePaint);
+          postInvalidate();
+      } catch (Exception e) {}
     }
 
     private void setupFFTAverage(int size) {
