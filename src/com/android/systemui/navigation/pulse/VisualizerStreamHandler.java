@@ -50,7 +50,6 @@ public class VisualizerStreamHandler {
     protected static final int VALID_BYTES_THRESHOLD = 3;
 
     protected Visualizer mVisualizer;
-    protected int mAudioSessionId;
 
     // manage stream validation
     protected int mConsecutiveFrames;
@@ -98,20 +97,14 @@ public class VisualizerStreamHandler {
      * 
      * @param player - MediaPlayer instance to link to
      */
-    public final void link(int audioSessionId) {
+    public final void link() {
         mUiOffloadThread.submit(() -> {
-            if (mVisualizer != null && audioSessionId != mAudioSessionId) {
-                mVisualizer.setEnabled(false);
-                mVisualizer.release();
-                mVisualizer = null;
-            }
             pause();
             resetAnalyzer();
-            mAudioSessionId = audioSessionId;
 
             if (mVisualizer == null) {
                 try {
-                    mVisualizer = new Visualizer(audioSessionId);
+                    mVisualizer = new Visualizer(0);
                 } catch (Exception e) {
                     Log.e(TAG, "Error enabling visualizer!", e);
                     return;

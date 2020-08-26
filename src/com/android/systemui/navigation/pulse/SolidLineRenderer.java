@@ -261,8 +261,8 @@ public class SolidLineRenderer extends Renderer {
                 mFFTAverage = null;
             }
 
-            mUnitsOpacity= Settings.Secure.getIntForUser(
-                    resolver, Settings.Secure.PULSE_SOLID_UNITS_OPACITY, 200,
+            mUnitsOpacity= Settings.System.getIntForUser(
+                    resolver, Settings.System.PULSE_SOLID_UNITS_OPACITY, 200,
                     UserHandle.USER_CURRENT);
 
             mPaint.setColor(ColorUtils.setAlphaComponent(mColor, mUnitsOpacity));
