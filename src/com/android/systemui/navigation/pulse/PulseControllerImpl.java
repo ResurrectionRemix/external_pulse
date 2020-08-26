@@ -93,6 +93,7 @@ public class PulseControllerImpl
     private PulseView mPulseView;
     private int mPulseStyle;
     private StatusBar mStatusbar;
+    private boolean mAmbientPulseEnabled;
 
     // Pulse state
     private boolean mLinked;
@@ -181,6 +182,9 @@ public class PulseControllerImpl
             mContext.getContentResolver().registerContentObserver(
                     Settings.System.getUriFor(Settings.System.PULSE_RENDER_STYLE), false, this,
                     UserHandle.USER_ALL);
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.AMBIENT_PULSE_ENABLED), false, this,
+                    UserHandle.USER_ALL);
         }
 
         @Override
@@ -189,7 +193,8 @@ public class PulseControllerImpl
                     || uri.equals(Settings.System.getUriFor(Settings.System.LOCKSCREEN_PULSE_ENABLED))) {
                 updateEnabled();
                 updatePulseVisibility();
-            } else if (uri.equals(Settings.System.getUriFor(Settings.System.PULSE_RENDER_STYLE))) {
+            } else if (uri.equals(Settings.System.getUriFor(Settings.System.PULSE_RENDER_STYLE))
+                || uri.equals(Settings.System.getUriFor(Settings.System.AMBIENT_PULSE_ENABLED))) {
                 updateRenderMode();
                 loadRenderer();
             }
@@ -208,8 +213,11 @@ public class PulseControllerImpl
         }
 
         void updateRenderMode() {
-            mPulseStyle = Settings.System.getIntForUser(mContext.getContentResolver(),
-                    Settings.System.PULSE_RENDER_STYLE, RENDER_STYLE_LEGACY, UserHandle.USER_CURRENT);
+            ContentResolver resolver = mContext.getContentResolver();
+            mPulseStyle = Settings.System.getIntForUser(resolver,
+                    Settings.System.PULSE_RENDER_STYLE, RENDER_STYLE_FADING_BARS, UserHandle.USER_CURRENT);
+            mAmbientPulseEnabled = Settings.System.getIntForUser(resolver,
+                    Settings.System.AMBIENT_PULSE_ENABLED, 1, UserHandle.USER_CURRENT) == 1;
         }
     };
 
@@ -224,15 +232,16 @@ public class PulseControllerImpl
         VisualizerView vv = getLsVisualizer();
         boolean allowLsPulse = allowLsPulse(vv);
         boolean allowNavPulse = allowNavPulse(nv);
-
+        boolean allowAmbPulse = vv != null && vv.isAttached()
+                && mAmbientPulseEnabled && mKeyguardShowing && mDozing;
         if (!allowNavPulse) {
-            detachPulseFrom(nv, allowLsPulse/*keep linked*/);
+            detachPulseFrom(nv, allowLsPulse || allowAmbPulse/*keep linked*/);
         }
-        if (!allowLsPulse) {
+        if (!allowLsPulse && !allowAmbPulse) {
             detachPulseFrom(vv, allowNavPulse/*keep linked*/);
         }
 
-        if (allowLsPulse) {
+        if (allowLsPulse || allowAmbPulse) {
             attachPulseTo(vv);
         } else if (allowNavPulse) {
             attachPulseTo(nv);
@@ -271,8 +280,8 @@ public class PulseControllerImpl
 
     private boolean allowLsPulse(VisualizerView v) {
         if (v == null) return false;
-        return v.isAttached() && mLsPulseEnabled
-                && mKeyguardShowing && !mDozing;
+        return (v.isAttached() && mLsPulseEnabled
+                && mKeyguardShowing && !mDozing);
     }
 
     @Inject
@@ -443,11 +452,14 @@ public class PulseControllerImpl
      * @return true if unlink is required, false if unlinking is not mandatory
      */
     private boolean isUnlinkRequired() {
-        return !mScreenOn
-                || mPowerSaveModeEnabled
+       boolean result = mPowerSaveModeEnabled
                 || mMusicStreamMuted
                 || mScreenPinningEnabled
                 || !mAttached;
+        if (!mAmbientPulseEnabled) {
+            result = result || !mScreenOn;
+        }
+        return result;
     }
 
     /**
@@ -456,13 +468,15 @@ public class PulseControllerImpl
      * @return true if all conditions are met to allow link, false if and conditions are not met
      */
     private boolean isAbleToLink() {
-        return mScreenOn
-                && mIsMediaPlaying
-                //&& !mLinked
+        boolean result = mIsMediaPlaying
                 && !mPowerSaveModeEnabled
                 && !mMusicStreamMuted
                 && !mScreenPinningEnabled
                 && mAttached;
+        if (!mAmbientPulseEnabled) {
+            result = result || mScreenOn;
+        }
+        return result;
     }
 
     private void doUnlinkVisualizer() {
