@@ -110,6 +110,7 @@ public class PulseControllerImpl
     private boolean mKeyguardShowing;
     private boolean mDozing;
     private boolean mKeyguardGoingAway;
+    public boolean mAlwaysEnabled;
 
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -186,18 +187,24 @@ public class PulseControllerImpl
             mContext.getContentResolver().registerContentObserver(
                     Settings.System.getUriFor(Settings.System.AMBIENT_PULSE_ENABLED), false, this,
                     UserHandle.USER_ALL);
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.PULSE_ALWAYS_ENABLED), false, this,
+                    UserHandle.USER_ALL);
         }
 
         @Override
         public void onChange(boolean selfChange, Uri uri) {
             if (uri.equals(Settings.System.getUriFor(Settings.System.NAVBAR_PULSE_ENABLED))
-                    || uri.equals(Settings.System.getUriFor(Settings.System.LOCKSCREEN_PULSE_ENABLED))) {
+               || uri.equals(Settings.System.getUriFor(Settings.System.LOCKSCREEN_PULSE_ENABLED))) {
                 updateEnabled();
                 updatePulseVisibility();
             } else if (uri.equals(Settings.System.getUriFor(Settings.System.PULSE_RENDER_STYLE))
                 || uri.equals(Settings.System.getUriFor(Settings.System.AMBIENT_PULSE_ENABLED))) {
                 updateRenderMode();
                 loadRenderer();
+            } else if (uri.equals(Settings.System.getUriFor(Settings.System.PULSE_ALWAYS_ENABLED))) {
+                updateEnabled();
+                linkIfNeeded();
             }
         }
 
@@ -211,6 +218,8 @@ public class PulseControllerImpl
                     Settings.System.NAVBAR_PULSE_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
             mLsPulseEnabled = Settings.System.getIntForUser(mContext.getContentResolver(),
                     Settings.System.LOCKSCREEN_PULSE_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
+            mAlwaysEnabled = Settings.System.getIntForUser(mContext.getContentResolver(),
+                    Settings.System.PULSE_ALWAYS_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
         }
 
         void updateRenderMode() {
@@ -222,10 +231,38 @@ public class PulseControllerImpl
         }
     };
 
+    public void forcelink() {
+        try {
+             if (mAlwaysEnabled) {
+                 if (isAbleToLink()) {
+                     doLinkVisualizer();
+                 }
+             }
+        } catch (Exception e) {}
+    }
+
+    public void linkIfNeeded() {
+        try {
+             if (mAlwaysEnabled) {
+                 if (isAbleToLink()) {
+                     doLinkVisualizer();
+                 } else {
+                 }
+             } else {
+                 if (!mIsMediaPlaying) {
+                     doUnlinkVisualizer();
+                 }
+             }
+        } catch (Exception e) {}
+    }
+
     public void notifyKeyguardGoingAway() {
         if (mLsPulseEnabled) {
             mKeyguardGoingAway = true;
             updatePulseVisibility();
+            if (mAlwaysEnabled) {
+                forcelink();
+            }
             mKeyguardGoingAway = false;
         }
     }
@@ -275,6 +312,9 @@ public class PulseControllerImpl
                 mRenderer.setKeyguardShowing(showing);
             }
             updatePulseVisibility();
+            if (mAlwaysEnabled) {
+                forcelink();
+            } 
         }
     }
 
@@ -448,6 +488,7 @@ public class PulseControllerImpl
     private boolean isUnlinkRequired() {
        boolean result = mPowerSaveModeEnabled
                 || mMusicStreamMuted
+                || (!mIsMediaPlaying && !mAlwaysEnabled)
                 || mScreenPinningEnabled
                 || !mAttached;
         if (!mAmbientPulseEnabled) {
@@ -462,9 +503,9 @@ public class PulseControllerImpl
      * @return true if all conditions are met to allow link, false if and conditions are not met
      */
     private boolean isAbleToLink() {
-        boolean result = mIsMediaPlaying
+        boolean result = (mIsMediaPlaying || mAlwaysEnabled)
                 && !mPowerSaveModeEnabled
-                && !mMusicStreamMuted
+                && (!mMusicStreamMuted || mAlwaysEnabled)
                 && !mScreenPinningEnabled
                 && mAttached;
         if (!mAmbientPulseEnabled) {
